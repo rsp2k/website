@@ -7,6 +7,8 @@ class SignupForm(FlaskForm):
     name = TextField(u'Your name', validators=[Required()])
     password = TextField(u'Your favorite password', validators=[Required()])
     email = TextField(u'Your email address', validators=[Email()])
+    phone = IntegerField(widget = widgets.Input(input_type="tel"))
+
     birthday = DateField(u'Your birthday')
 
     a_float = FloatField(u'A floating point number')
