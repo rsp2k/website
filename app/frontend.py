@@ -22,7 +22,7 @@ nav.register_element('frontend_top', Navbar(
     View('Acme Corp', '.index'),
     View('Home', '.index'),
     View('Contact', '.contact'),
-#    View('Debug-Info', 'debug.debug_root'),
+    View('Debug-Info', 'debug.debug_root'),
     Subgroup(
         'Developer Docs',
         Link('Flask-Bootstrap', 'http://pythonhosted.org/Flask-Bootstrap'),
