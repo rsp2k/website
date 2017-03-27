@@ -11,6 +11,7 @@ from flask_bootstrap import Bootstrap
 
 
 from .frontend import frontend
+from .api import api
 from .nav import nav
 
 
@@ -32,6 +33,7 @@ def create_app(configfile=None):
 
     # https://pythonhosted.org/Flask-Bootstrap/
     app.register_blueprint(frontend)
+    app.register_blueprint(api, url_prefix='/api')
 
     # use our own bootstrap
     app.config['BOOTSTRAP_SERVE_LOCAL'] = True
