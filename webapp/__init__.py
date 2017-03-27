@@ -13,7 +13,6 @@
 # source.
 
 from flask import Flask
-from flask_appconfig import AppConfig
 from flask_bootstrap import Bootstrap
 
 from .frontend import frontend
@@ -26,9 +25,6 @@ def create_app(configfile=None):
     # http://flask.pocoo.org/docs/patterns/appfactories/
 
     app = Flask(__name__)
-
-    # We use Flask-Appconfig here, but this is not a requirement
-    AppConfig(app)
 
     # Install our Bootstrap extension
     Bootstrap(app)
