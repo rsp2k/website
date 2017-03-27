@@ -16,7 +16,7 @@ class ContactForm(FlaskForm):
     name = TextField(u'Your name', validators=[Required()])
     email = TextField(u'Your email address', validators=[Email()])
     phone = FormField(TelephoneForm)
-    message = TextAreaField('Your message:', [Required()])
+    message = TextAreaField('Your message:', widget=TextArea(row=70, cols=11), validators=[Required()])
 
     submit = SubmitField(u'Signup')
 
