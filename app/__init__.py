@@ -1,16 +1,6 @@
-# Welcome to the Flask-Bootstrap sample application. This will give you a
-# guided tour around creating an application using Flask-Bootstrap.
-#
-# To run this application yourself, please install its requirements first:
-#
-#   $ pip install -r sample_app/requirements.txt
-#
-# Then, you can actually run the application.
-#
-#   $ flask --app=sample_app dev
-#
-# Afterwards, point your browser to http://localhost:5000, then check out the
-# source.
+"""
+Entry point for app
+"""
 
 from flask import Flask
 
@@ -22,28 +12,24 @@ from .nav import nav
 
 
 def create_app(configfile=None):
-    # We are using the "Application Factory"-pattern here, which is described
-    # in detail inside the Flask docs:
-    # http://flask.pocoo.org/docs/patterns/appfactories/
-
+    """
+    Application Factory - see http://flask.pocoo.org/docs/patterns/appfactories/
+    """
     app = Flask(__name__)
 
-    # We use Flask-Appconfig here, but this is not a requirement
+    # http://pythonhosted.org/flask-appconfig/
     AppConfig(app)
 
-    # Install our Bootstrap extension
+    # https://pythonhosted.org/Flask-Bootstrap/
     Bootstrap(app)
 
-    # Our application uses blueprints as well; these go well with the
-    # application factory. We already imported the blueprint, now we just need
-    # to register it:
+    # https://pythonhosted.org/Flask-Bootstrap/
     app.register_blueprint(frontend)
 
-    # Because we're security-conscious developers, we also hard-code disabling
-    # the CDN support (this might become a default in later versions):
+    # use our own bootstrap
     app.config['BOOTSTRAP_SERVE_LOCAL'] = True
 
-    # We initialize the navigation as well
+    # http://pythonhosted.org/flask-nav/
     nav.init_app(app)
 
     return app
