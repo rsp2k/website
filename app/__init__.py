@@ -24,7 +24,7 @@ def create_app(configfile=None):
     #AppConfig(app)
 
     # Load config from environment variables that start with a prefix of MYAPP_
-    from_envvars(app.config)
+    from_envvars(app.config, prefix=app.name.upper() + '_')
 
     # https://pythonhosted.org/Flask-Bootstrap/
     Bootstrap(app)
