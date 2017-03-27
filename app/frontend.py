@@ -10,7 +10,7 @@ from flask_bootstrap import __version__ as FLASK_BOOTSTRAP_VERSION
 from flask_nav.elements import Navbar, View, Subgroup, Link, Text, Separator
 from markupsafe import escape
 
-from .forms import SignupForm
+from .forms import ContactForm
 from .nav import nav
 
 frontend = Blueprint('frontend', __name__)
@@ -45,10 +45,9 @@ def index():
     return render_template('index.html')
 
 
-# Shows a long signup form, demonstrating form rendering.
-@frontend.route('/example-form/', methods=('GET', 'POST'))
-def example_form():
-    form = SignupForm()
+@frontend.route('/contact/', methods=('GET', 'POST'))
+def contact():
+    form = ContactForm()
 
     if form.validate_on_submit():
         # We don't have anything fancy in our application, so we are just
@@ -62,4 +61,4 @@ def example_form():
         # In a real application, you may wish to avoid this tedious redirect.
         return redirect(url_for('.index'))
 
-    return render_template('signup.html', form=form)
+    return render_template('contact.html', form=form)
