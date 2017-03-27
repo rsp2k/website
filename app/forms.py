@@ -2,13 +2,15 @@ from flask_wtf import FlaskForm
 from wtforms.fields import *
 from wtforms.widgets import Input
 from wtforms.validators import Required, Email
+from wtforms import ValidationError
 
+import phonenumbers
 
 class SignupForm(FlaskForm):
     name = TextField(u'Your name', validators=[Required()])
     password = TextField(u'Your favorite password', validators=[Required()])
     email = TextField(u'Your email address', validators=[Email()])
-    phone = IntegerField(widget = Input(input_type="tel"))
+    phone = StringField('Phone', validators=[DataRequired()])
 
     birthday = DateField(u'Your birthday')
 
@@ -23,3 +25,16 @@ class SignupForm(FlaskForm):
                         validators=[Required('You must agree to not agree!')])
 
     submit = SubmitField(u'Signup')
+
+
+    def validate_phone(form, field):
+        if len(field.data) > 16:
+            raise ValidationError('Invalid phone number.')
+        try:
+            input_number = phonenumbers.parse(field.data)
+            if not (phonenumbers.is_valid_number(input_number)):
+                raise ValidationError('Invalid phone number.')
+        except:
+            input_number = phonenumbers.parse("+1"+field.data)
+            if not (phonenumbers.is_valid_number(input_number)):
+                raise ValidationError('Invalid phone number.')
