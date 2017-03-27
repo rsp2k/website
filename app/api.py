@@ -35,7 +35,7 @@ def tropo_webhook():
 
 # FIXME PARSE Customer ID and message
 
-    customer_room_post_message(customer_id, { message: request.json['message'] }):
+    customer_room_post_message(customer_id, { message: request.json['message'] })
     return 'OK'
 
 @api.route('/spark-webhook', methods=['GET'])
@@ -52,7 +52,7 @@ def spark_webhook_post():
 
 # FIXME check for mention before sending
 
-    send_customer_sms(customer_id, message):
+    send_customer_sms(customer_id, message)
 
     return 'OK'
 
@@ -76,7 +76,7 @@ def customer_webhook_post():
         files: request.json['files'],
     }
 
-    message = customer_room_post_message(customer_id, args):
+    message = customer_room_post_message(customer_id, args)
 
     if not message:
        abort(500)
@@ -132,7 +132,7 @@ def smartsheet_log_signup(customer_id, signup_time):
             break
 
     else:
-        print "Failed logging signup from %s. A smartsheet named %s wasn't found under token %s" % (customer_id, signup_sheet_name, smartsheet_token)
+        print("Failed logging signup from %s. A smartsheet named %s wasn't found under token %s" % (customer_id, signup_sheet_name, smartsheet_token))
 
     columns = smartsheet.Sheets.get_columns(sheetInfo.id)
     row = smartsheet.models.Row()
@@ -168,7 +168,7 @@ def customer_new_signup(customer_id, team_id):
     # create a new team room for the customer
     room = api.rooms.create(customer_id, teamId=team_id)
 
-    smartsheet_log_signup(customer_id, datetime.now()):
+    smartsheet_log_signup(customer_id, datetime.now())
 
     return room
 
