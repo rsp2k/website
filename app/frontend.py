@@ -15,13 +15,12 @@ from .nav import nav
 
 frontend = Blueprint('frontend', __name__)
 
-# We're adding a navbar as well through flask-navbar. In our example, the
-# navbar has an usual amount of Link-Elements, more commonly you will have a
-# lot more View instances.
+# Menu / navbar
 nav.register_element('frontend_top', Navbar(
     View('Acme Corp', 'frontend.index'),
     View('Home', 'frontend.index'),
     View('Contact', 'frontend.contact'),
+    View('API', 'api.index'),
     Subgroup(
         'Developer Docs',
         Link('Flask-Bootstrap', 'http://pythonhosted.org/Flask-Bootstrap'),
@@ -36,14 +35,12 @@ nav.register_element('frontend_top', Navbar(
         Link('Customize', 'http://getbootstrap.com/customize/'), ),
     Text('Using Flask-Bootstrap {}'.format(FLASK_BOOTSTRAP_VERSION)), ))
 
-
-# Our index-page just shows a quick explanation. Check out the template
-# "templates/index.html" documentation for more details.
+# Simple Homepage
 @frontend.route('/')
 def index():
     return render_template('index.html')
 
-
+# Simple contact form
 @frontend.route('/contact/', methods=('GET', 'POST'))
 def contact():
     form = ContactForm()
