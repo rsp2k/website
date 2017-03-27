@@ -5,7 +5,10 @@ Entry point for app
 from flask import Flask
 
 from flask_appconfig import AppConfig
+from flask_appconfig.env import from_envvars
+
 from flask_bootstrap import Bootstrap
+
 
 from .frontend import frontend
 from .nav import nav
@@ -18,7 +21,10 @@ def create_app(configfile=None):
     app = Flask(__name__)
 
     # http://pythonhosted.org/flask-appconfig/
-    AppConfig(app)
+    #AppConfig(app)
+
+    # Load config from environment variables that start with a prefix of MYAPP_
+    from_envvars(app.config, prefix=app.name.upper() + '_')
 
     # https://pythonhosted.org/Flask-Bootstrap/
     Bootstrap(app)
