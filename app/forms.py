@@ -9,7 +9,7 @@ import phonenumbers
 
 class TelephoneForm(FlaskForm):
     country_code = IntegerField('Country Code', validators=[Required()])
-    area_code    = IntegerField('Area Code/Exchange', validators=[Required()])
+    area_code    = IntegerField('Area Code', validators=[Required()])
     number       = TextField('Number')
 
 class ContactForm(FlaskForm):
