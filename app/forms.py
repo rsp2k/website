@@ -10,7 +10,7 @@ class SignupForm(FlaskForm):
     name = TextField(u'Your name', validators=[Required()])
     password = TextField(u'Your favorite password', validators=[Required()])
     email = TextField(u'Your email address', validators=[Email()])
-    phone = StringField('Phone', validators=[DataRequired()])
+    phone = StringField('Phone', validators=[Required()])
 
     birthday = DateField(u'Your birthday')
 
