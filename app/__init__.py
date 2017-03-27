@@ -21,10 +21,11 @@ def create_app(configfile=None):
     app = Flask(__name__)
 
     # http://pythonhosted.org/flask-appconfig/
-    #AppConfig(app)
+    AppConfig(app)
 
+    # FIXME
     # Load config from environment variables that start with a prefix of MYAPP_
-    from_envvars(app.config, prefix=app.name.upper() + '_')
+    #from_envvars(app.config, prefix=app.name.upper() + '_')
 
     # https://pythonhosted.org/Flask-Bootstrap/
     Bootstrap(app)
