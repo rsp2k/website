@@ -41,7 +41,7 @@ def tropo_webhook():
     t = tropo.Tropo()
     if s.from_channel is 'VOICE':
         t.say(os.getenv('CS_VOICE_GREETING', "Transferring you now, please wait."))
-        t.transfer({to: os.getenv('CS_VOICE_DN', '+18005551212')
+        t.transfer({to: os.getenv('CS_VOICE_DN', '+18005551212')})
         return t.RenderJson()
 
     customer_id = s.fromaddress['id']
@@ -199,10 +199,13 @@ def customer_new_signup(customer_id, team_id):
 
     # create a new team room for the customer
     room = api.rooms.create(customer_id, teamId=team_id)
+
+    # create webhook for new room
+    # FIXME
     target_url = url_for('.')
-    resource = 
-    event = 
-    filter_ = 
+    resource = ""
+    event = ""
+    filter_ = ""
     secret = target_url + '12345'
     webhook = api.webhook.create(room.title + ' create', target_url, resource, event, filter_, secret)
 
