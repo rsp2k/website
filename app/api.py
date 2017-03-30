@@ -13,7 +13,7 @@ from urllib.parse import urlencode
 import requests
 
 from ciscosparkapi import CiscoSparkAPI
-import tropo
+import .tropo
 import smartsheet
 
 api = Blueprint('api', __name__)
