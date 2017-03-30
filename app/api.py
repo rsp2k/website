@@ -33,7 +33,7 @@ def tropo_webhook_get():
 @api.route('/tropo-webhook', methods=['POST'])
 def tropo_webhook():
     """
-    Recieve POST from Tropo WebAPI on inbound voice/sms call
+    POST'd data from Tropo WebAPI on inbound voice/sms call
     """
 
     s = tropo.Session(request.body)
@@ -47,7 +47,7 @@ def tropo_webhook():
     customer_id = s.fromaddress['id']
     message = s.initialText
 
-    message_posted = customer_room_post_message(customer_id, { message:message }
+    message_posted = customer_room_post_message(customer_id, text=message)
     if message_posted:
         t.say("We received your message and and agent will get back to you soon.")
     else:
@@ -62,12 +62,24 @@ def spark_webhook_get():
 @api.route('/spark-webhook', methods=['POST'])
 def spark_webhook_post():
     """
-    Receive data from Spark webhooks
+    POST'd Data from Spark webhooks
     """
 
-# FIXME PARSE Customer ID, mention and message
-    
-# FIXME check for mention before sending
+    if not request.json or not ('event' in request.json and 'data' in request.json):
+        abort(400)
+
+    if request.json['event'] is not 'message':
+        abort(400)
+
+    message = request.json
+
+    # allow agents to privately excange messages within context of the customer space
+    if message.mentionedPeople:
+        return 'OK'
+
+    # parse out customers phone number from room name
+    room = api.rooms.get(message.room.id)
+    customer_id = room.title
 
     send_customer_sms(customer_id, message)
 
@@ -86,21 +98,22 @@ def customer_webhook_post():
     if not request.json or not ('customer_id' in request.json and 'message' in request.json):
         abort(400)
 
-    args = {
-        customer_id: request.json['customer_id'],
-        message: request.json['message'],
-        markdown: request.json['markdown'],
-        files: request.json['files'],
-    }
+    args = { 'customer_id': request.json['customer_id'] }
+    if 'text' in request.json:
+        args.append('text', request.json['text'])
 
-    message = customer_room_post_message(customer_id, args)
+    if 'files' in request.json:
+        args.append('files', request.json['files'])
+
+    # unpack args and pass to function
+    message = customer_room_post_message(customer_id, **args)
 
     if not message:
        abort(500)
 
     return 'OK'
 
-def customer_room_post_message(customer_id, **kwargs):
+def customer_room_post_message(customer_id, **room_args):
     """
     Posts message to customer's Spark Room.
     Pass the customer #, the Spark Room ID will be looked up/created for you.
@@ -122,7 +135,7 @@ def customer_room_post_message(customer_id, **kwargs):
         room = customer_new_signup(customer_id, team_id)
 
     # post the message to spark room
-    return api.messages.create(roomId=room.id, **kwargs)
+    return api.messages.create(roomId=room.id, **room_args)
 
 def send_customer_sms(customer_id, message):
     """
@@ -132,7 +145,7 @@ def send_customer_sms(customer_id, message):
 
     url = 'https://api.tropo.com/1.0/sessions?%s' % urlencode({action:'create', token:token, numbertodial:customer_id, msg:message})
     call = requests.get(url,headers={'content-type':'application/x-www-form-urlencoded'})
-    return call.status_code, call.content
+    return call
 
 
 def smartsheet_log_signup(customer_id, signup_time):
@@ -177,7 +190,7 @@ def customer_new_signup(customer_id, team_id):
     * creates row in Smart Sheet
 
     NOTE: in a production environment these tasks would be offloaded to Celery
-    or some other asyc job queue to keep users from waiting/isolate from errors
+    or some other async job queue to keep users from waiting/isolate from errors
     """
 
     # Send message via tropo
@@ -186,8 +199,14 @@ def customer_new_signup(customer_id, team_id):
 
     # create a new team room for the customer
     room = api.rooms.create(customer_id, teamId=team_id)
+    target_url = url_for('.')
+    resource = 
+    event = 
+    filter_ = 
+    secret = target_url + '12345'
+    webhook = api.webhook.create(room.title + ' create', target_url, resource, event, filter_, secret)
 
-    smartsheet_log_signup(customer_id, datetime.now())
+    #smartsheet_log_signup(customer_id, datetime.now())
 
     return room
 
