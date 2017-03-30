@@ -9,8 +9,11 @@ from flask import Blueprint, render_template, redirect, url_for, request
 
 from datetime import datetime
 
+from urllib.parse import urlencode
+import requests
+
 from ciscosparkapi import CiscoSparkAPI
-from tropo import Tropo, Session
+import tropo
 import smartsheet
 
 api = Blueprint('api', __name__)
@@ -30,13 +33,27 @@ def tropo_webhook_get():
 @api.route('/tropo-webhook', methods=['POST'])
 def tropo_webhook():
     """
-    Recieve POST from Tropo on inbound voice/sms call
+    Recieve POST from Tropo WebAPI on inbound voice/sms call
     """
 
-# FIXME PARSE Customer ID and message
+    s = tropo.Session(request.body)
 
-    customer_room_post_message(customer_id, { message: request.json['message'] })
-    return 'OK'
+    t = tropo.Tropo()
+    if s.from_channel is 'VOICE':
+        t.say(os.getenv('CS_VOICE_GREETING', "Transferring you now, please wait."))
+        t.transfer({to: os.getenv('CS_VOICE_DN', '+18005551212')
+        return t.RenderJson()
+
+    customer_id = s.fromaddress['id']
+    message = s.initialText
+
+    message_posted = customer_room_post_message(customer_id, { message:message }
+    if message_posted:
+        t.say("We received your message and and agent will get back to you soon.")
+    else:
+        t.say("There was a problem recieving your request, please try again later.")
+
+    return t.RenderJson()
 
 @api.route('/spark-webhook', methods=['GET'])
 def spark_webhook_get():
@@ -49,7 +66,7 @@ def spark_webhook_post():
     """
 
 # FIXME PARSE Customer ID, mention and message
-
+    
 # FIXME check for mention before sending
 
     send_customer_sms(customer_id, message)
@@ -111,10 +128,12 @@ def send_customer_sms(customer_id, message):
     """
     Generic function to send customer_id message via SMS
     """
+    token = os.getenv('TROPO_TOKEN', '')
 
-    t = Tropo()
-    t.call(to="+%s" % customer_id, network = "SMS")
-    t.say(message)
+    url = 'https://api.tropo.com/1.0/sessions?%s' % urlencode({action:'create', token:token, numbertodial:customer_id, msg:message})
+    call = requests.get(url,headers={'content-type':'application/x-www-form-urlencoded'})
+    return call.status_code, call.content
+
 
 def smartsheet_log_signup(customer_id, signup_time):
     """
