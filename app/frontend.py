@@ -21,13 +21,14 @@ nav.register_element('frontend_top', Navbar(
     View('Home', 'frontend.index'),
     View('Contact', 'frontend.contact'),
     View('API', 'api.index'),
+    Link('GitHub','https://github.com'),
     Subgroup(
         'Spark',
         Link('Quick Reference', 'https://developer.ciscospark.com/quick-reference.html'),
         Link('ciscosparkapi', 'https://github.com/CiscoDevNet/ciscosparkapi'),
     ),
     Subgroup(
-        'Tropo','https://www.tropo.com/docs/webapi',
+        'Tropo',
         Link('WebAPI', 'https://www.tropo.com/docs/webapi'),
         Link('Coding Tips', 'https://www.tropo.com/docs/coding-tips'),
     ),    
@@ -36,7 +37,6 @@ nav.register_element('frontend_top', Navbar(
         Link('v3.6 Docs', 'https://docs.python.org/3/'),
         Link('Awesome Python', 'https://github.com/vinta/awesome-python'),
     ),
-    Link('GitHub','https://github.com'),
     Subgroup(
         'Web Developer Docs',
         Link('Flask-Bootstrap', 'http://pythonhosted.org/Flask-Bootstrap'),
