@@ -41,24 +41,24 @@ def tropo_webhook():
     https://www.tropo.com/docs/coding-tips/parsing-json-python
     """
 
-    s = tropo.Session(request.body)
+    # Parse data passed in by Tropo
+    tropo_session = tropo.Session(request.body)
+    customer_id = tropo_session.fromaddress['id']
+    message = tropo_session.initialText
 
-    t = tropo.Tropo()
-    if s.from_channel is 'VOICE':
-        t.say(os.getenv('CS_VOICE_GREETING', "Transferring you now, please wait."))
-        t.transfer({to: os.getenv('CS_VOICE_DN', '+18005551212')})
-        return t.RenderJson()
+    # Create empty tropo response
+    tropo_response = tropo.Tropo()
 
-    customer_id = s.fromaddress['id']
-    message = s.initialText
-
+    # post messge to Spark room
     message_posted = customer_room_post_message(customer_id, text=message)
-    if message_posted:
-        t.say("We received your message and and agent will get back to you soon.")
-    else:
-        t.say("There was a problem recieving your request, please try again later.")
 
-    return t.RenderJson()
+    # Acknowledge receipt/error of message
+    if message_posted:
+        tropo_response.say("We received your message and and agent will get back to you soon.")
+    else:
+        tropo_response.say("There was a problem receiving your request, please try again later.")
+
+    return tropo_response.RenderJson()
 
 @api.route('/spark-webhook', methods=['GET'])
 def spark_webhook_get():
@@ -76,11 +76,12 @@ def spark_webhook_post():
     if request.json['event'] is not 'message':
         abort(400)
 
-    # Validate webhook
-    # https://developer.ciscospark.com/blog/blog-details-8123.html
+    # Check for Spark Key defined
     webhook_key = os.getenv('SPARK_WEBHOOK_KEY', '')
+
+    # only validate if key is defined
     if webhook_key:
-        # Compute signauture using key
+        # Validate webhook - https://developer.ciscospark.com/blog/blog-details-8123.html
         hashed = hmac.new(webhook_key, request.data, hashlib.sha1)
         expected_signature = hashed.hexdigest()
         if expected_signature != request.headers.get('X-Spark-Signature'):
@@ -91,7 +92,6 @@ def spark_webhook_post():
 
     # allow agents to privately exchange messages within context of the customer space
     # without sending a copy to the customer (agent whisper/notes)
-
     if message.mentionedPeople:
         return 'OK'
 
@@ -101,7 +101,7 @@ def spark_webhook_post():
     # customer id is room name
     customer_id = room.title
 
-    send_customer_sms(customer_id, message)
+    send_customer_sms(customer_id, message.text)
 
     return 'OK'
 
@@ -115,17 +115,21 @@ def customer_webhook_post():
     API endpoint to customer_room_post_message
 
     """
+
+    # make sure we have the data necessary to process the request
     if not request.json or not ('customer_id' in request.json and 'message' in request.json):
         abort(400)
 
+    # initialize dictionary with customer id
     args = { 'customer_id': request.json['customer_id'] }
-    if 'text' in request.json:
-        args.append('text', request.json['text'])
 
-    if 'files' in request.json:
-        args.append('files', request.json['files'])
+    # loop over allowed API parameters to be passed to function and add if found in JSON
+    allowed_parameters = ['text', 'markdown', 'files']
+    for parameter in allowed_parameters:
+        if parameter in request.json:
+            args.append(parameter, request.json[parameter])
 
-    # unpack args and pass to function
+    # pass customer id and upacked args to function
     message = customer_room_post_message(customer_id, **args)
 
     if not message:
