@@ -24,6 +24,7 @@ nav.register_element('frontend_top', Navbar(
     Link('GitHub','https://github.com'),
     Subgroup(
         'Spark',
+        Link('My Apps', 'https://developer.ciscospark.com/apps.html'),
         Link('Quick Reference', 'https://developer.ciscospark.com/quick-reference.html'),
         Link('ciscosparkapi', 'https://github.com/CiscoDevNet/ciscosparkapi'),
         Link('WebHooks', 'https://developer.ciscospark.com/webhooks-explained.html'),
@@ -31,6 +32,7 @@ nav.register_element('frontend_top', Navbar(
         Link('Admin API', 'https://developer.ciscospark.com/admin-api.html'),
         Link('JS SDK Download', 'https://www.npmjs.com/package/ciscospark'),
         Link('JS SDK Docs', 'https://ciscospark.github.io/spark-js-sdk/api/'),
+        Link('Innovation Fund', 'https://developer.ciscospark.com/fund/'),
     ),
     Subgroup(
         'Tropo',
