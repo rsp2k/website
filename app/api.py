@@ -12,9 +12,11 @@ from datetime import datetime
 from urllib.parse import urlencode
 import requests
 
-from ciscosparkapi import CiscoSparkAPI
-import app.tropo
-import smartsheet
+import hashlib
+import hmac
+
+import ciscosparkapi
+import tropo
 
 api = Blueprint('api', __name__)
 
@@ -34,6 +36,9 @@ def tropo_webhook_get():
 def tropo_webhook():
     """
     POST'd data from Tropo WebAPI on inbound voice/sms call
+    It's possible to create a similar script and host on Tropo.
+    Beware, some caveats exist in Tropo's environment. Eg:
+    https://www.tropo.com/docs/coding-tips/parsing-json-python
     """
 
     s = tropo.Session(request.body)
@@ -71,14 +76,29 @@ def spark_webhook_post():
     if request.json['event'] is not 'message':
         abort(400)
 
+    # Validate webhook
+    # https://developer.ciscospark.com/blog/blog-details-8123.html
+    webhook_key = os.getenv('SPARK_WEBHOOK_KEY', '')
+    if webhook_key:
+        # Compute signauture using key
+        hashed = hmac.new(webhook_key, request.data, hashlib.sha1)
+        expected_signature = hashed.hexdigest()
+        if expected_signature != request.headers.get('X-Spark-Signature'):
+            abort(400)
+
+    # extract message from JSON
     message = request.json
 
-    # allow agents to privately excange messages within context of the customer space
+    # allow agents to privately exchange messages within context of the customer space
+    # without sending a copy to the customer (agent whisper/notes)
+
     if message.mentionedPeople:
         return 'OK'
 
-    # parse out customers phone number from room name
+    # Get the room info from room id that was passed from webhook
     room = api.rooms.get(message.room.id)
+
+    # customer id is room name
     customer_id = room.title
 
     send_customer_sms(customer_id, message)
@@ -139,7 +159,8 @@ def customer_room_post_message(customer_id, **room_args):
 
 def send_customer_sms(customer_id, message):
     """
-    Generic function to send customer_id message via SMS
+    Simple function to send customer_id a SMS via Tropo
+    https://www.tropo.com/docs/webapi/quickstarts/sending-text-messages
     """
     token = os.environ['TROPO_TOKEN']
     query_string = {action:'create', 
@@ -156,6 +177,8 @@ def smartsheet_log_signup(customer_id, signup_time):
     """
     Create row in smartsheet based on environment variables
     """
+
+    import smartsheet
     signup_sheet_name = current_app.config['SMARTSHEET_SIGNUP_SHEET']
     smartsheet_token = current_app.config['SMARTSHEET_TOKEN']
 
@@ -202,16 +225,26 @@ def customer_new_signup(customer_id, team_id):
     send_customer_sms(customer_id, message)
 
     # create a new team room for the customer
+    # http://ciscosparkapi.readthedocs.io/en/latest/user/api.html#ciscosparkapi.RoomsAPI.create
     room = api.rooms.create(customer_id, teamId=team_id)
 
     # create webhook for new room
-    # FIXME
-    target_url = url_for('.')
-    resource = ""
-    event = ""
-    filter_ = ""
+    # http://ciscosparkapi.readthedocs.io/en/latest/user/api.html#ciscosparkapi.WebhooksAPI.create
+
+    # let flask build an external url based on SERVER_NAME (set by nginx, based on Hostname sent by Browser)
+    target_url = url_for('.spark_webhook_post', _external=True)
+
+    # we want notified anytime a message
+    resource = "messages"
+    # is created 
+    event = "created"
+    # in the newly created room
+    filter_ = "roomId=%s" % room.id
+
+    # insecure example secret used to generate the payload signature
     secret = target_url + '12345'
-    webhook = api.webhook.create(room.title + ' create', target_url, resource, event, filter_, secret)
+
+    webhook = api.webhook.create(room.title + 'messages created', target_url, resource, event, filter_, secret)
 
     #smartsheet_log_signup(customer_id, datetime.now())
 
