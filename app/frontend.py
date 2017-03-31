@@ -29,7 +29,8 @@ nav.register_element('frontend_top', Navbar(
         Link('WebHooks', 'https://developer.ciscospark.com/webhooks-explained.html'),
         Link('Bots', 'https://developer.ciscospark.com/bots.html'),
         Link('Admin API', 'https://developer.ciscospark.com/admin-api.html'),
-        Link('JS SDK', 'https://www.npmjs.com/package/ciscospark'),
+        Link('JS SDK Download', 'https://www.npmjs.com/package/ciscospark'),
+        Link('JS SDK Docs', 'https://ciscospark.github.io/spark-js-sdk/api/'),
     ),
     Subgroup(
         'Tropo',
