@@ -41,7 +41,8 @@ nav.register_element('frontend_top', Navbar(
         Link('Forums', 'https://support.tropo.com/hc/en-us/community/topics'),
         Link('IRC Chat', 'https://www.tropo.com/help/irc-chat/'),
         Link('Coding Tips', 'https://www.tropo.com/docs/coding-tips'),
-        Link('Developer Network', 'https://www.tropo.com/tropo-developer-network/'),        
+        Link('Developer Network', 'https://www.tropo.com/tropo-developer-network/'),
+        Link('SparkLog4Tropo', 'https://gist.github.com/ObjectIsAdvantag/b73db0cffcedb1152a2d6669cb3d27b0'),
     ),    
    Subgroup(
         'Python',
