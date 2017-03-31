@@ -27,7 +27,7 @@ nav.register_element('frontend_top', Navbar(
         Link('ciscosparkapi', 'https://github.com/CiscoDevNet/ciscosparkapi'),
     ),
     Subgroup(
-        'Tropo',https://www.tropo.com/docs/webapi
+        'Tropo','https://www.tropo.com/docs/webapi',
         Link('WebAPI', 'https://www.tropo.com/docs/webapi'),
         Link('Coding Tips', 'https://www.tropo.com/docs/coding-tips'),
     ),    
