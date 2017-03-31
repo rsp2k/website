@@ -141,9 +141,13 @@ def send_customer_sms(customer_id, message):
     """
     Generic function to send customer_id message via SMS
     """
-    token = os.getenv('TROPO_TOKEN', '')
-
-    url = 'https://api.tropo.com/1.0/sessions?%s' % urlencode({action:'create', token:token, numbertodial:customer_id, msg:message})
+    token = os.environ['TROPO_TOKEN']
+    query_string = {action:'create', 
+                    token:token, 
+                    numbertodial:customer_id,
+                    msg:message, 
+                   }
+    url = 'https://api.tropo.com/1.0/sessions?%s' % urlencode(query_string)
     call = requests.get(url,headers={'content-type':'application/x-www-form-urlencoded'})
     return call
 
