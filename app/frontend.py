@@ -46,8 +46,9 @@ nav.register_element('frontend_top', Navbar(
     ),    
    Subgroup(
         'Python',
-        Link('v3.6 Docs', 'https://docs.python.org/3/'),
+        Link('Beginners Guide', 'https://wiki.python.org/moin/BeginnersGuide/'),
         Link('Awesome Python', 'https://github.com/vinta/awesome-python'),
+        Link('v3.6 Docs', 'https://docs.python.org/3/'),
     ),
     Subgroup(
         'Web Developer Docs',
