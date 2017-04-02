@@ -33,4 +33,4 @@
 flask --app uwsgi
 
 # Notes
-If you edit template files, you will need to stop and start flask to see the changes, editing python (.py) files fill cause the server to automatically restart.
+If you edit template files, you will need to stop and start flask to see the changes, editing python (.py) files will restart the server automatically.
