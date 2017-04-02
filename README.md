@@ -1,7 +1,15 @@
 # demo-site 
 
+# Prerequisites
+- git
+- Python 3.6+
+- pip
+
 # First Time setup
-* Clone this repository
+- Clone this repository (will fail if the destination directory exists)
+  * git clone https://github.com/rsp2k/website.git
+- Enter newly created repository directory
+  * cd website
 - Create virtualenv
   * python virtualenv venv --python=python3
 - Install requirements
@@ -14,6 +22,13 @@
     * SMARTSHEET_SIGNUP_SHEET
 
 # Launch
+- From a terminal window, change to the directory where the repository was checked out above
+- Make sure virtualenv is loaded
+  - Mac/Linux
+    * source venv/bin/activate
+  - Windows
+    * venv\Scripts\activate
+
 * Start flask
 flask --app uwsgi
 
