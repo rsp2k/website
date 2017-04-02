@@ -31,7 +31,7 @@
     * venv\Scripts\activate
 
 * Start flask
-flask --app uwsgi
+flask --app app
 
 # Notes
 If you edit template files, you will need to stop and start flask to see the changes, editing python (.py) files will restart the server automatically.
