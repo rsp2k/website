@@ -14,10 +14,11 @@
   * python virtualenv venv --python=python3
 - Install requirements
   * pip install -r requirements.txt
-- Edit TOKENS.py file
+- Edit .env file
   * TROPO_TOKEN
   * SPARK_TOKEN
-  - Optional SmartSheet integraton
+  * SPARK_AGENT_TEAM_ID
+  - For optional SmartSheet integraton
     * SMARTSHEET_TOKEN
     * SMARTSHEET_SIGNUP_SHEET
 
