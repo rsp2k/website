@@ -5,19 +5,24 @@
 # You can find out more about blueprints at
 # http://flask.pocoo.org/docs/blueprints/
 
-from flask import Blueprint, render_template, redirect, url_for, request
 
+# Python standard library modules
 from datetime import datetime
-
 from urllib.parse import urlencode
-import requests
-
 import hashlib
 import hmac
 
-import ciscosparkapi
-import tropo
+# Flask modules
+from flask import Blueprint, render_template, redirect, url_for, request
 
+# Third party modules
+import requests
+
+# Cisco specific modules
+import ciscosparkapi
+import ciscotropowebapi
+
+# Create blueprint object
 api = Blueprint('api', __name__)
 
 @api.route('/')
@@ -29,28 +34,31 @@ def index():
 
 @api.route('/tropo-webhook', methods=['GET'])
 def tropo_webhook_get():
-    return 'Try POST?'
-
+    return render_template('tropo-webhook.html')
 
 @api.route('/tropo-webhook', methods=['POST'])
-def tropo_webhook():
+def tropo_webhook_post():
     """
     POST'd data from Tropo WebAPI on inbound voice/sms call
-    It's possible to create a similar script and host on Tropo.
+
+    It is possible to create a similar script and host on Tropo.
     Beware, some caveats exist in Tropo's environment. Eg:
     https://www.tropo.com/docs/coding-tips/parsing-json-python
+
+    The hosted script would post received message data and calling phone number
+    to the customer_room_message_post API endpoint.
     """
 
     # Parse data passed in by Tropo
-    tropo_session = tropo.Session(request.body)
+    tropo_session = ciscotropowebap.Session(request.body)
     customer_id = tropo_session.fromaddress['id']
     message = tropo_session.initialText
 
     # Create empty tropo response
-    tropo_response = tropo.Tropo()
+    tropo_response = ciscotropowebapi.Tropo()
 
     # post messge to Spark room
-    message_posted = customer_room_post_message(customer_id, text=message)
+    message_posted = customer_room_message_post(customer_id, text=message)
 
     # Acknowledge receipt/error of message
     if message_posted:
@@ -62,7 +70,7 @@ def tropo_webhook():
 
 @api.route('/spark-webhook', methods=['GET'])
 def spark_webhook_get():
-    return 'Try POST?'
+    return render_template('spark-webhook.html')
 
 @api.route('/spark-webhook', methods=['POST'])
 def spark_webhook_post():
@@ -105,12 +113,12 @@ def spark_webhook_post():
 
     return 'OK'
 
-@api.route('/customer-webhook', methods=['GET'])
-def customer_webhook_get():
-    return 'Try POST?'
+@api.route('/customer_room_message_post', methods=['GET'])
+def customer_room_post_message_get():
+    return render_template('customer-room-post-message.html')
 
-@api.route('/customer-webhook', methods=['POST'])
-def customer_webhook_post():
+@api.route('/customer_room_message_post', methods=['POST'])
+def customer_room_post_message_post():
     """
     API endpoint to customer_room_post_message
 
@@ -130,14 +138,14 @@ def customer_webhook_post():
             args.append(parameter, request.json[parameter])
 
     # pass customer id and upacked args to function
-    message = customer_room_post_message(customer_id, **args)
+    message = customer_room_message_post(customer_id, **args)
 
     if not message:
        abort(500)
 
     return 'OK'
 
-def customer_room_post_message(customer_id, **room_args):
+def customer_room_message_post(customer_id, **room_args):
     """
     Posts message to customer's Spark Room.
     Pass the customer #, the Spark Room ID will be looked up/created for you.
@@ -167,52 +175,35 @@ def send_customer_sms(customer_id, message):
     https://www.tropo.com/docs/webapi/quickstarts/sending-text-messages
     """
     token = os.environ['TROPO_TOKEN']
-    query_string = {action:'create', 
-                    token:token, 
+    query_string = {action:'create',
+                    token:token,
                     numbertodial:customer_id,
-                    msg:message, 
+                    msg:message,
                    }
     url = 'https://api.tropo.com/1.0/sessions?%s' % urlencode(query_string)
     call = requests.get(url,headers={'content-type':'application/x-www-form-urlencoded'})
     return call
 
-
-def smartsheet_log_signup(customer_id, signup_time):
+def customer_room_webhook_create(target_url, room, resource, event, filter_, secret=None):
     """
-    Create row in smartsheet based on environment variables
+    Create a webhook in room for resource on event filtered by filter_.
+    Optionally set secret used to create signature
     """
+    # we want notified anytime a message
+    resource = "messages"
+    # is created
+    event = "created"
+    # in the newly created room
+    filter_ = "roomId=%s" % room.id
 
-    import smartsheet
-    signup_sheet_name = current_app.config['SMARTSHEET_SIGNUP_SHEET']
-    smartsheet_token = current_app.config['SMARTSHEET_TOKEN']
+    # insecure example secret used to generate the payload signature
+    secret = target_url + '12345'
 
-    smartsheet = smartsheet.Smartsheet(smartsheet_token)
-    action = smartsheet.Sheets.list_sheets(include_all=True)
-    sheets = action.data
-    for sheetInfo in sheets:
-        if sheetInfo.name == signup_sheet_name:
-            sheet = smartsheet.Sheets.get_sheet(sheetInfo.id)
-            break
+    webhook = api.webhook.create(room.title + 'messages created',
+            target_url, resource, event, filter_, secret)
 
-    else:
-        print("Failed logging signup from %s. A smartsheet named %s wasn't found under token %s" % (customer_id, signup_sheet_name, smartsheet_token))
+    return webhook
 
-    columns = smartsheet.Sheets.get_columns(sheetInfo.id)
-    row = smartsheet.models.Row()
-    row.to_top = True
-    row.cells.append({
-            'column_id': cols['signup_time'],
-            'value': signup_time,
-            'strict': False
-        },
-        {
-            'column_id': cols['phone'],
-            'value': customer_id,
-            'strict': False
-        },
-    )
-
-    return smartsheet.Sheets.add_rows(sheetInfo.id, [row])
 
 def customer_new_signup(customer_id, team_id):
     """
@@ -235,22 +226,54 @@ def customer_new_signup(customer_id, team_id):
     # create webhook for new room
     # http://ciscosparkapi.readthedocs.io/en/latest/user/api.html#ciscosparkapi.WebhooksAPI.create
 
-    # let flask build an external url based on SERVER_NAME (set by nginx, based on Hostname sent by Browser)
+    # let flask build an external url based on SERVER_NAME
     target_url = url_for('.spark_webhook_post', _external=True)
+    secret = None
 
-    # we want notified anytime a message
-    resource = "messages"
-    # is created 
-    event = "created"
-    # in the newly created room
-    filter_ = "roomId=%s" % room.id
-
-    # insecure example secret used to generate the payload signature
-    secret = target_url + '12345'
-
-    webhook = api.webhook.create(room.title + 'messages created', target_url, resource, event, filter_, secret)
+    webhook = customer_room_webhook_create(target_url, room,
+            "messages", "created", "roomId=%s" % room.id)
 
     #smartsheet_log_signup(customer_id, datetime.now())
 
     return room
+
+def smartsheet_log_signup(customer_id, signup_time):
+    """
+    Create row in smartsheet based on environment variables
+    """
+
+    import smartsheet
+    signup_sheet_name = current_app.config['SMARTSHEET_SIGNUP_SHEET']
+    smartsheet_token = current_app.config['SMARTSHEET_TOKEN']
+
+    smartsheet = smartsheet.Smartsheet(smartsheet_token)
+    action = smartsheet.Sheets.list_sheets(include_all=True)
+    sheets = action.data
+    for sheetInfo in sheets:
+        if sheetInfo.name == signup_sheet_name:
+            sheet = smartsheet.Sheets.get_sheet(sheetInfo.id)
+            break
+
+    else:
+        print("Failed logging signup from %s. A smartsheet named %s wasn't found under token %s"
+                % (customer_id, signup_sheet_name, smartsheet_token))
+
+    columns = smartsheet.Sheets.get_columns(sheetInfo.id)
+    row = smartsheet.models.Row()
+    row.to_top = True
+    row.cells.append({
+            'column_id': cols['signup_time'],
+            'value': signup_time,
+            'strict': False
+        },
+        {
+            'column_id': cols['phone'],
+            'value': customer_id,
+            'strict': False
+        },
+    )
+
+    return smartsheet.Sheets.add_rows(sheetInfo.id, [row])
+
+
 

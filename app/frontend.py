@@ -5,7 +5,7 @@
 # You can find out more about blueprints at
 # http://flask.pocoo.org/docs/blueprints/
 
-from flask import Blueprint, render_template, flash, redirect, url_for
+from flask import Blueprint, render_template, flash, redirect, url_for, request
 from flask_bootstrap import __version__ as FLASK_BOOTSTRAP_VERSION
 from flask_nav.elements import Navbar, View, Subgroup, Link, Text, Separator
 from markupsafe import escape
@@ -20,7 +20,6 @@ nav.register_element('frontend_top', Navbar(
     View('Acme Corp', 'frontend.index'),
     View('Home', 'frontend.index'),
     View('Contact', 'frontend.contact'),
-    View('API', 'api.index'),
     Link('GitHub','https://github.com'),
     Subgroup(
         'Spark',
@@ -36,14 +35,14 @@ nav.register_element('frontend_top', Navbar(
     ),
     Subgroup(
        'Tropo',
-       Link('Python Module', 'https://github.com/tropo/tropo-webapi-python'),
+       Link('Python Module', 'https://github.com/rsp2k/ciscotropowebapi'),
        Link('WebAPI', 'https://www.tropo.com/docs/webapi'),
        Link('Forums', 'https://support.tropo.com/hc/en-us/community/topics'),
        Link('IRC Chat', 'https://www.tropo.com/help/irc-chat/'),
        Link('Coding Tips', 'https://www.tropo.com/docs/coding-tips'),
        Link('Developer Network', 'https://www.tropo.com/tropo-developer-network/'),
        Link('SparkLog4Tropo', 'https://gist.github.com/ObjectIsAdvantag/b73db0cffcedb1152a2d6669cb3d27b0'),
-    ),    
+    ),
    Subgroup(
        'Python',
        Link('Beginners Guide', 'https://wiki.python.org/moin/BeginnersGuide/'),
@@ -75,7 +74,7 @@ def index():
 def contact():
     form = ContactForm()
 
-    if form.validate_on_submit():
+    if request.method == 'POST' and form.validate():
         # We don't have anything fancy in our application, so we are just
         # flashing a message when a user completes the form successfully.
         #

@@ -9,7 +9,6 @@ from flask_appconfig.env import from_envvars
 
 from flask_bootstrap import Bootstrap
 
-
 from .frontend import frontend
 from .api import api
 from .nav import nav
@@ -36,7 +35,7 @@ def create_app(configfile=None):
     app.register_blueprint(api, url_prefix='/api')
 
     # use our own bootstrap
-    app.config['BOOTSTRAP_SERVE_LOCAL'] = True
+    #app.config['BOOTSTRAP_SERVE_LOCAL'] = True
 
     # http://pythonhosted.org/flask-nav/
     nav.init_app(app)
