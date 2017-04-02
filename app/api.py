@@ -7,10 +7,13 @@
 
 
 # Python standard library modules
+import os
 from datetime import datetime
 from urllib.parse import urlencode
 import hashlib
 import hmac
+
+import logging
 
 # Flask modules
 from flask import Blueprint, render_template, redirect, url_for, request
@@ -22,6 +25,10 @@ import requests
 import ciscosparkapi
 import ciscotropowebapi
 
+# SmartSheet
+if os.getenv('SMARTSHEET_TOKEN', None):
+   import smartsheet
+
 # Create blueprint object
 api = Blueprint('api', __name__)
 
@@ -32,11 +39,11 @@ def index():
     """
     return render_template('api.html')
 
-@api.route('/tropo-webhook', methods=['GET'])
+@api.route('/tropo-webhook/', methods=['GET'])
 def tropo_webhook_get():
     return render_template('tropo-webhook.html')
 
-@api.route('/tropo-webhook', methods=['POST'])
+@api.route('/tropo-webhook/', methods=['POST'])
 def tropo_webhook_post():
     """
     POST'd data from Tropo WebAPI on inbound voice/sms call
@@ -46,33 +53,33 @@ def tropo_webhook_post():
     https://www.tropo.com/docs/coding-tips/parsing-json-python
 
     The hosted script would post received message data and calling phone number
-    to the customer_room_message_post API endpoint.
+    to the customer_room_message_send API endpoint.
     """
-
     # Parse data passed in by Tropo
-    tropo_session = ciscotropowebap.Session(request.body)
-    customer_id = tropo_session.fromaddress['id']
+    tropo_session = ciscotropowebapi.Session(request.data.decode())
+    customer_id = tropo_session.from_['id']
     message = tropo_session.initialText
 
     # Create empty tropo response
     tropo_response = ciscotropowebapi.Tropo()
 
     # post messge to Spark room
-    message_posted = customer_room_message_post(customer_id, text=message)
+    spark_message = customer_room_message_send(customer_id, text=message)
 
     # Acknowledge receipt/error of message
-    if message_posted:
-        tropo_response.say("We received your message and and agent will get back to you soon.")
+    if spark_message:
+        # TODO Could add check to see if any agents on the rooms team are active and respond accordingly
+        tropo_response.say("Thanks. An agent will get back to you as soon as possible. :)")
     else:
         tropo_response.say("There was a problem receiving your request, please try again later.")
 
     return tropo_response.RenderJson()
 
-@api.route('/spark-webhook', methods=['GET'])
+@api.route('/spark-webhook/', methods=['GET'])
 def spark_webhook_get():
     return render_template('spark-webhook.html')
 
-@api.route('/spark-webhook', methods=['POST'])
+@api.route('/spark-webhook/', methods=['POST'])
 def spark_webhook_post():
     """
     POST'd Data from Spark webhooks
@@ -113,11 +120,11 @@ def spark_webhook_post():
 
     return 'OK'
 
-@api.route('/customer_room_message_post', methods=['GET'])
+@api.route('/customer_room_message_post/', methods=['GET'])
 def customer_room_post_message_get():
     return render_template('customer-room-post-message.html')
 
-@api.route('/customer_room_message_post', methods=['POST'])
+@api.route('/customer_room_message_post/', methods=['POST'])
 def customer_room_post_message_post():
     """
     API endpoint to customer_room_post_message
@@ -138,36 +145,42 @@ def customer_room_post_message_post():
             args.append(parameter, request.json[parameter])
 
     # pass customer id and upacked args to function
-    message = customer_room_message_post(customer_id, **args)
+    message = customer_room_message_send(customer_id, **args)
 
     if not message:
        abort(500)
 
     return 'OK'
 
-def customer_room_message_post(customer_id, **room_args):
+def customer_room_message_send(customer_id, **room_args):
     """
     Posts message to customer's Spark Room.
     Pass the customer #, the Spark Room ID will be looked up/created for you.
     """
 
-    team_id = current_app.config['SPARK_AGENT_TEAM_ID']
-    api = CiscoSparkAPI(access_token=current_app.config['SPARK_TOKEN'])
+    if 'text' not in room_args and 'markup' not in room_args and 'files' not in room_args:
+           return None
 
-    rooms = api.rooms.list(teamId=team_id, type='group')
+    team_id = os.environ['SPARK_AGENT_TEAM_ID']
+    spark_api = ciscosparkapi.CiscoSparkAPI(access_token=os.environ['SPARK_TOKEN'])
 
+    rooms = spark_api.rooms.list(teamId=team_id) # type='group')
+
+    logging.info("Looking for %s's room" % customer_id)
     for room in rooms:
-        if room.title is customer_id:
+        logging.info("Checking room title %s" % room.title)
+        if room.title[-10:] is customer_id[-10:]:
             break # found the customers room
 
     # If room is not found and break is never encountered, else block runs
     # http://book.pythontips.com/en/latest/for_-_else.html
     else:
+        logging.info("Didn't find a room, creating a new one")
         # New customer
         room = customer_new_signup(customer_id, team_id)
 
     # post the message to spark room
-    return api.messages.create(roomId=room.id, **room_args)
+    return spark_api.messages.create(roomId=room.id, **room_args)
 
 def send_customer_sms(customer_id, message):
     """
@@ -175,10 +188,10 @@ def send_customer_sms(customer_id, message):
     https://www.tropo.com/docs/webapi/quickstarts/sending-text-messages
     """
     token = os.environ['TROPO_TOKEN']
-    query_string = {action:'create',
-                    token:token,
-                    numbertodial:customer_id,
-                    msg:message,
+    query_string = {'action':'create',
+                    'token':token,
+                    'numberToDial':customer_id,
+                    'message':message,
                    }
     url = 'https://api.tropo.com/1.0/sessions?%s' % urlencode(query_string)
     call = requests.get(url,headers={'content-type':'application/x-www-form-urlencoded'})
@@ -199,7 +212,8 @@ def customer_room_webhook_create(target_url, room, resource, event, filter_, sec
     # insecure example secret used to generate the payload signature
     secret = target_url + '12345'
 
-    webhook = api.webhook.create(room.title + 'messages created',
+    spark_api = ciscosparkapi.CiscoSparkAPI(access_token=os.environ['SPARK_TOKEN'])
+    webhook = spark_api.webhooks.create(room.title + 'messages created',
             target_url, resource, event, filter_, secret)
 
     return webhook
@@ -219,9 +233,10 @@ def customer_new_signup(customer_id, team_id):
     message = "Thanks for signing up! To get in touch, reply to this message or call this number during business hours."
     send_customer_sms(customer_id, message)
 
+    spark_api = ciscosparkapi.CiscoSparkAPI(access_token=os.environ['SPARK_TOKEN'])
     # create a new team room for the customer
     # http://ciscosparkapi.readthedocs.io/en/latest/user/api.html#ciscosparkapi.RoomsAPI.create
-    room = api.rooms.create(customer_id, teamId=team_id)
+    room = spark_api.rooms.create(customer_id, teamId=team_id)
 
     # create webhook for new room
     # http://ciscosparkapi.readthedocs.io/en/latest/user/api.html#ciscosparkapi.WebhooksAPI.create
@@ -233,7 +248,7 @@ def customer_new_signup(customer_id, team_id):
     webhook = customer_room_webhook_create(target_url, room,
             "messages", "created", "roomId=%s" % room.id)
 
-    #smartsheet_log_signup(customer_id, datetime.now())
+    smartsheet_log_signup(customer_id, datetime.now())
 
     return room
 
@@ -242,24 +257,29 @@ def smartsheet_log_signup(customer_id, signup_time):
     Create row in smartsheet based on environment variables
     """
 
-    import smartsheet
-    signup_sheet_name = current_app.config['SMARTSHEET_SIGNUP_SHEET']
-    smartsheet_token = current_app.config['SMARTSHEET_TOKEN']
+    if not os.getenv('SMARTSHEET_TOKEN', None):
+        return None
 
-    smartsheet = smartsheet.Smartsheet(smartsheet_token)
-    action = smartsheet.Sheets.list_sheets(include_all=True)
+    smartsheet_token = os.getenv('SMARTSHEET_TOKEN', None)
+    signup_sheet_name = os.getenv('SMARTSHEET_SIGNUP_SHEET', None)
+
+    if not smartsheet_token and signup_sheet_name:
+        return None
+
+    smartsheet_api = smartsheet.Smartsheet(smartsheet_token)
+    action = smartsheet_api.Sheets.list_sheets(include_all=True)
     sheets = action.data
     for sheetInfo in sheets:
         if sheetInfo.name == signup_sheet_name:
-            sheet = smartsheet.Sheets.get_sheet(sheetInfo.id)
+            sheet = smartsheet_api.Sheets.get_sheet(sheetInfo.id)
             break
 
     else:
         print("Failed logging signup from %s. A smartsheet named %s wasn't found under token %s"
                 % (customer_id, signup_sheet_name, smartsheet_token))
 
-    columns = smartsheet.Sheets.get_columns(sheetInfo.id)
-    row = smartsheet.models.Row()
+    columns = smartsheet_api.Sheets.get_columns(sheetInfo.id)
+    row = smartsheet_api.models.Row()
     row.to_top = True
     row.cells.append({
             'column_id': cols['signup_time'],
@@ -273,7 +293,5 @@ def smartsheet_log_signup(customer_id, signup_time):
         },
     )
 
-    return smartsheet.Sheets.add_rows(sheetInfo.id, [row])
-
-
+    return smartsheet_api.Sheets.add_rows(sheetInfo.id, [row])
 

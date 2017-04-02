@@ -4,4 +4,5 @@
 # Note: Don't *ever* do this in a real app. A secret key should not have a
 #       default, rather the app should fail if it is missing. For the sample
 #       application, one is provided for convenience.
-SECRET_KEY = 'devkey'
+import os
+SECRET_KEY = os.getenv('SECRET_KEY', 'devkey')

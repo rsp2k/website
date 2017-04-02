@@ -13,17 +13,8 @@
    intact. #}
 {% block content %}
     <div class="container">
-    {%- with messages = get_flashed_messages(with_categories=True) %}
-    {%- if messages %}
-        <div class="row">
-            <div class="col-md-12">
-                {{utils.flashed_messages(messages)}}
-            </div>
-        </div>
-    {%- endif %}
-    {%- endwith %}
         <div class="jumbotron">
-            <h1>Welcome to the Cisco Spark / Tropo API Lab</h1>
+            <h1>Cisco Spark / Tropo API Lab</h1>
             <p>Let's get started</p>
             <p>
                 <a class="btn btn-lg btn-default" role="button" href="{{ url_for('frontend.contact') }}" >Contact Us</a>

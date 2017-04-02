@@ -2,11 +2,12 @@
 Entry point for app
 """
 
+import os
+
 from flask import Flask
 
 from flask_appconfig import AppConfig
 from flask_appconfig.env import from_envvars
-
 from flask_bootstrap import Bootstrap
 
 from .frontend import frontend
@@ -20,22 +21,26 @@ def create_app(configfile=None):
     """
     app = Flask(__name__)
 
+
     # http://pythonhosted.org/flask-appconfig/
     AppConfig(app)
 
-    # FIXME
-    # Load config from environment variables that start with a prefix of MYAPP_
-    #from_envvars(app.config, prefix=app.name.upper() + '_')
+    # Turn off redirect intercepts
+    app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
+    app.config['SERVER_NAME'] = os.getenv('SERVER_NAME', app.config['SERVER_NAME'])
+    print("Server Name" + os.getenv('SERVER_NAME', None))
 
     # https://pythonhosted.org/Flask-Bootstrap/
     Bootstrap(app)
 
-    # https://pythonhosted.org/Flask-Bootstrap/
-    app.register_blueprint(frontend)
-    app.register_blueprint(api, url_prefix='/api')
+    # Load blueprints
+    # http://flask.pocoo.org/docs/0.12/blueprints/
 
-    # use our own bootstrap
-    #app.config['BOOTSTRAP_SERVE_LOCAL'] = True
+    # Website
+    app.register_blueprint(frontend)
+
+    # API endpoints
+    app.register_blueprint(api, url_prefix='/api')
 
     # http://pythonhosted.org/flask-nav/
     nav.init_app(app)
