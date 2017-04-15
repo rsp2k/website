@@ -6,14 +6,11 @@ import os
 
 from flask import Flask
 
-from flask_appconfig import AppConfig
-from flask_appconfig.env import from_envvars
 from flask_bootstrap import Bootstrap
 
 from .frontend import frontend
 from .api import api
 from .nav import nav
-
 
 def create_app(configfile=None):
     """
