@@ -27,8 +27,6 @@ def create_app(configfile=None):
 
     # Turn off redirect intercepts
     app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
-    app.config['SERVER_NAME'] = os.getenv('SERVER_NAME', app.config['SERVER_NAME'])
-    print("Server Name" + os.getenv('SERVER_NAME', None))
 
     # https://pythonhosted.org/Flask-Bootstrap/
     Bootstrap(app)
