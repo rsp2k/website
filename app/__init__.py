@@ -21,13 +21,6 @@ def create_app(configfile=None):
     """
     app = Flask(__name__)
 
-
-    # http://pythonhosted.org/flask-appconfig/
-    AppConfig(app)
-
-    # Turn off redirect intercepts
-    app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
-
     # https://pythonhosted.org/Flask-Bootstrap/
     Bootstrap(app)
 
