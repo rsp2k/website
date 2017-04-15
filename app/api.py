@@ -16,7 +16,7 @@ import hmac
 import logging
 
 # Flask modules
-from flask import Blueprint, render_template, redirect, url_for, request
+from flask import Blueprint, render_template, redirect, url_for, request, current_app, abort
 
 # Third party modules
 import requests
@@ -24,10 +24,6 @@ import requests
 # Cisco specific modules
 import ciscosparkapi
 import ciscotropowebapi
-
-# SmartSheet
-if os.getenv('SMARTSHEET_TOKEN', None):
-   import smartsheet
 
 # Create blueprint object
 api = Blueprint('api', __name__)
@@ -92,7 +88,7 @@ def spark_webhook_post():
         abort(400)
 
     # Check for Spark Key defined
-    webhook_key = os.getenv('SPARK_WEBHOOK_KEY', '')
+    webhook_key = current_app.config['SPARK_WEBHOOK_KEY']
 
     # only validate if key is defined
     if webhook_key:
@@ -145,7 +141,7 @@ def customer_room_post_message_post():
             args.append(parameter, request.json[parameter])
 
     # pass customer id and upacked args to function
-    message = customer_room_message_send(customer_id, **args)
+    message = customer_room_message_send(request.json['customer_id'], **args)
 
     if not message:
        abort(500)
@@ -161,8 +157,8 @@ def customer_room_message_send(customer_id, **room_args):
     if 'text' not in room_args and 'markup' not in room_args and 'files' not in room_args:
            return None
 
-    team_id = os.environ['SPARK_AGENT_TEAM_ID']
-    spark_api = ciscosparkapi.CiscoSparkAPI(access_token=os.environ['SPARK_TOKEN'])
+    team_id = current_app.config['SPARK_AGENT_TEAM_ID']
+    spark_api = ciscosparkapi.CiscoSparkAPI(access_token=current_app.config['SPARK_TOKEN'])
 
     rooms = spark_api.rooms.list(teamId=team_id) # type='group')
 
@@ -187,9 +183,9 @@ def send_customer_sms(customer_id, message):
     Simple function to send customer_id a SMS via Tropo
     https://www.tropo.com/docs/webapi/quickstarts/sending-text-messages
     """
-    token = os.environ['TROPO_TOKEN']
+    tropo_token = current_app.config['TROPO_TOKEN']
     query_string = {'action':'create',
-                    'token':token,
+                    'token':tropo_token,
                     'numberToDial':customer_id,
                     'message':message,
                    }
@@ -212,12 +208,9 @@ def customer_room_webhook_create(target_url, room, resource, event, filter_, sec
     # insecure example secret used to generate the payload signature
     secret = target_url + '12345'
 
-    spark_api = ciscosparkapi.CiscoSparkAPI(access_token=os.environ['SPARK_TOKEN'])
-    webhook = spark_api.webhooks.create(room.title + 'messages created',
+    spark_api = ciscosparkapi.CiscoSparkAPI(access_token=current_app.config['SPARK_TOKEN'])
+    return  spark_api.webhooks.create(room.title + 'messages created',
             target_url, resource, event, filter_, secret)
-
-    return webhook
-
 
 def customer_new_signup(customer_id, team_id):
     """
@@ -257,14 +250,16 @@ def smartsheet_log_signup(customer_id, signup_time):
     Create row in smartsheet based on environment variables
     """
 
-    if not os.getenv('SMARTSHEET_TOKEN', None):
+    if not current_app.config['SMARTSHEET_TOKEN']:
         return None
 
-    smartsheet_token = os.getenv('SMARTSHEET_TOKEN', None)
-    signup_sheet_name = os.getenv('SMARTSHEET_SIGNUP_SHEET', None)
+    smartsheet_token = current_app.config['SMARTSHEET_TOKEN']
+    signup_sheet_name = current_app.config['SMARTSHEET_SIGNUP_SHEET']
 
     if not smartsheet_token and signup_sheet_name:
         return None
+
+    import smartsheet
 
     smartsheet_api = smartsheet.Smartsheet(smartsheet_token)
     action = smartsheet_api.Sheets.list_sheets(include_all=True)
@@ -278,7 +273,7 @@ def smartsheet_log_signup(customer_id, signup_time):
         print("Failed logging signup from %s. A smartsheet named %s wasn't found under token %s"
                 % (customer_id, signup_sheet_name, smartsheet_token))
 
-    columns = smartsheet_api.Sheets.get_columns(sheetInfo.id)
+    cols = smartsheet_api.Sheets.get_columns(sheetInfo.id)
     row = smartsheet_api.models.Row()
     row.to_top = True
     row.cells.append({

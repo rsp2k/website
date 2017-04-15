@@ -1,8 +1,13 @@
 # The default_config module automatically gets imported by Appconfig, if it
 # exists. See https://pypi.python.org/pypi/flask-appconfig for details.
 
-# Note: Don't *ever* do this in a real app. A secret key should not have a
-#       default, rather the app should fail if it is missing. For the sample
-#       application, one is provided for convenience.
-import os
-SECRET_KEY = os.getenv('SECRET_KEY', 'devkey')
+# Note: This isn't a secure app, neither is the "secret" key
+SECRET_KEY = 'Shh, this is a secret'
+
+SERVER_NAME = '' # Example webapp.vpod###.dc-01.com, from your dCloud overview tab
+
+TROPO_KEY = 'zxv'
+
+SPARK_KEY = ''
+SPARK_AGENT_TEAM_ID = ''
+SPARK_WEBHOOK_KEY = ''
