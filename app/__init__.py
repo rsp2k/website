@@ -19,7 +19,13 @@ def create_app(configfile=None):
     """
     Application Factory - see http://flask.pocoo.org/docs/patterns/appfactories/
     """
+
     app = Flask(__name__)
+
+    app.config['SECRET_KEY'] = 'NOT SO SECRET'
+
+    # FIXME Set to dCloud URL
+    #app.config['SERVER_NAME'] = ''
 
     # https://pythonhosted.org/Flask-Bootstrap/
     Bootstrap(app)
