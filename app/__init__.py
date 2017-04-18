@@ -12,6 +12,8 @@ from .frontend import frontend
 from .api import api
 from .nav import nav
 
+from .api import config
+
 def create_app(configfile=None):
     """
     Application Factory - see http://flask.pocoo.org/docs/patterns/appfactories/
@@ -21,8 +23,7 @@ def create_app(configfile=None):
 
     app.config['SECRET_KEY'] = 'NOT SO SECRET'
 
-    # FIXME Set to dCloud URL
-    #app.config['SERVER_NAME'] = ''
+    app.config['SERVER_NAME'] = config.SERVER_NAME
 
     # https://pythonhosted.org/Flask-Bootstrap/
     Bootstrap(app)
