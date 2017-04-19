@@ -1,7 +1,12 @@
 # User defined variables
+# to use these in you app you must first 'from app import config', prefix variable names in this file with config.
+# Eg, SERVERNAME in this file would be availabe as config.SERVER_NAME after the import
 
 # dCloud external URL, used when creating Spark webhook
 SERVER_NAME = 'webapp.vpod651.dc-01.com'
+
+# Phone number to redirect inbound voice calls to
+CUSTOMER_SERVICE_REDIRECT_DN = ''
 
 # Key for Tropo Send SMS application
 TROPO_KEY = '554c4d714b7559414e4a566948424c424c6875686175644e67574e475156586e67646a7941414450734f7347'
