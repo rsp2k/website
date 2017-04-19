@@ -2,14 +2,73 @@ from urllib.parse import urlencode
 
 import requests
 
+import ciscotropowebapi
+
 from app import config
 
 
+def webhook_process(request):
+    """
+     POST'd data from Tropo WebAPI on inbound voice/sms call
+
+     It is possible to create a similar script and host on Tropo.
+     Beware, some caveats exist in Tropo's environment. Eg:
+     https://www.tropo.com/docs/coding-tips/parsing-json-python
+
+     """
+    # Parse data passed in by Tropo
+    tropo_session = ciscotropowebapi.Session(request.data.decode())
+
+    # Create empty tropo response
+    tropo_response = ciscotropowebapi.Tropo()
+
+    # Check to see if this is a request to send a message
+    if 'numberToDial' in tropo_session and 'msg' in tropo_session:
+        # add a + if necessary
+        if tropo_session.numberToDial.startswith('+'):
+            number_to_call = tropo_session.numberToDial
+        else:
+            number_to_call = '+' + tropo_session.numberToDial
+
+        # Send SMS: https://www.tropo.com/docs/webapi/quickstarts/sending-text-messages
+        # tropo_response.call(to=number_to_call, network="SMS")
+        # tropo_response.say(tropo_session.msg)
+
+        # Better yet, use the message "shortcut"
+        # https://www.tropo.com/docs/webapi/quickstarts/mixing-text-voice-single-app/using-message-shortcut
+        tropo_response.message(tropo_session.msg, number_to_call, network="SMS")
+    # Inbound Voice Call
+    elif tropo_session.fromaddress['network'] is 'voice':
+        # Send voice calls to the contact center DN
+        tropo_response.redirect(config.CUSTOMER_SERVICE_REDIRECT_DN)
+    # Inbound SMS
+    elif tropo_session.initalText:
+        # Avoid circular imports, only import right before use
+        from app import spark
+        # post message to Spark room
+        spark_message = spark.customer_room_message_send(tropo_session.from_['id'], text=tropo_session.initialText)
+
+        # Acknowledge receipt/error of message
+        if spark_message:
+            tropo_response.say("Thanks. An agent will get back to you as soon as possible. :)")
+        else:
+            tropo_response.say("There was a problem receiving your request, please try again later.")
+
+    else:
+        raise InvalidRequestError("Invalid request")
+
+    # Return response to Tropo
+    return tropo_response.RenderJson()
+
+class InvalidRequestError(Exception):
+    pass
+
 def send_sms(destination_number, text_message):
     """
-    Simple function to send customer_id a SMS via Tropo
+    Simple function to send customer_id a SMS by triggering a Tropo application based on TROPO_KEY
     https://www.tropo.com/docs/webapi/quickstarts/sending-text-messages
-    Doesn't support international, beware of international SMS regulations: 
+    
+    Beware of international SMS regulations: 
     https://www.tropo.com/docs/scripting/international-features/international-dialing-sms
     """
 

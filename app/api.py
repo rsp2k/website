@@ -37,50 +37,7 @@ def tropo_webhook_get():
 
 @api.route('/tropo-webhook/', methods=['POST'])
 def tropo_webhook_post():
-    """
-    POST'd data from Tropo WebAPI on inbound voice/sms call
-
-    It is possible to create a similar script and host on Tropo.
-    Beware, some caveats exist in Tropo's environment. Eg:
-    https://www.tropo.com/docs/coding-tips/parsing-json-python
-
-    The hosted script would post received message data and calling phone number
-    to the customer_room_message_send API endpoint.
-    """
-    # Parse data passed in by Tropo
-    tropo_session = ciscotropowebapi.Session(request.data.decode())
-
-    # Create empty tropo response
-    tropo_response = ciscotropowebapi.Tropo()
-
-    # Check to see if this is a request to send a message
-    if 'numberToDial' in tropo_session and 'msg' in tropo_session:
-        # Send SMS: https://www.tropo.com/docs/webapi/quickstarts/sending-text-messages
-        # tropo_response.call(to=tropo_session.numberToDial, network="SMS")
-        # tropo_response.say(tropo_session.msg)
-
-        # Better yet, use the message "shortcut"
-        # https://www.tropo.com/docs/webapi/quickstarts/mixing-text-voice-single-app/using-message-shortcut
-        tropo_response.message(tropo_session.msg, tropo_session.numberToDial, network="SMS")
-    # Inbound Voice Call
-    elif tropo.session.fromaddress['network'] is 'voice':
-        # Send voice calls to the contact center DN
-        tropo_response.redirect(config.CUSTOMER_SERVICE_REDIRECT_DN)
-    # Inbound SMS
-    else:
-        # post message to Spark room
-        spark_message = spark.customer_room_message_send(tropo_session.from_['id'], text=tropo_session.initialText)
-
-        # Acknowledge receipt/error of message
-        if spark_message:
-            # TODO Could add check to see if any agents on the rooms team are active and respond accordingly
-            tropo_response.say("Thanks. An agent will get back to you as soon as possible. :)")
-        else:
-           tropo_response.say("There was a problem receiving your request, please try again later.")
-
-    # Return response to Tropo
-    return tropo_response.RenderJson()
-
+    return tropo.webhook_process(request)
 
 @api.route('/spark-webhook/', methods=['GET'])
 def spark_webhook_get():
