@@ -35,6 +35,7 @@ def create_room_webhook(room, webhook_url):
 
     return webhook
 
+
 def customer_room_message_send(customer_id, **room_args):
     """
     Posts message to customer's Spark Room for customer_id using room_args. Room/Webhook will be created if necessary.
@@ -69,8 +70,10 @@ def customer_room_message_send(customer_id, **room_args):
     # post the message to spark room
     return spark_api.messages.create(roomId=room.id, **room_args)
 
+
 class PassedParametersError(Exception):
     pass
+
 
 def is_customers_room(room, customer_id):
     """
@@ -82,6 +85,7 @@ def is_customers_room(room, customer_id):
     if room.title[-10:] is customer_id[:-10]:
         return True
     return False
+
 
 def customer_new_signup(spark_api, customer_id, team_id, message_from_customer, webhook_url):
     """

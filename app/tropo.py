@@ -6,6 +6,7 @@ import ciscotropowebapi
 
 from app import config
 
+
 def webhook_process(request):
     """
      POST'd data from Tropo WebAPI on inbound voice/sms call
@@ -65,8 +66,10 @@ def webhook_process(request):
     # Return response to Tropo
     return tropo_response.RenderJson()
 
+
 class InvalidRequestError(Exception):
     pass
+
 
 def send_sms(destination_number, text_message):
     """
