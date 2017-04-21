@@ -4,10 +4,7 @@
 #
 # You can find out more about blueprints at
 # http://flask.pocoo.org/docs/blueprints/
-from flask import Blueprint, render_template, url_for, request, current_app, abort
-
-from app import config
-
+from flask import Blueprint, render_template, url_for, request, abort
 from app import tropo
 from app import spark
 
@@ -87,5 +84,3 @@ Expects JSON data with customer_id and message
        abort(500)
 
     return 'OK'
-
-

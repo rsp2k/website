@@ -3,6 +3,7 @@
 # Eg, SERVERNAME in this file would be availabe as config.SERVER_NAME after the import
 
 # dCloud external URL, used when creating Spark webhook
+# Public facing name of the webapp
 SERVER_NAME = 'webapp.vpod651.dc-01.com'
 
 # Phone number to redirect inbound voice calls to

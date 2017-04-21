@@ -6,7 +6,6 @@
 # http://flask.pocoo.org/docs/blueprints/
 
 from flask import Blueprint, render_template, flash, redirect, url_for, request
-from markupsafe import escape
 
 from .forms import ContactForm
 

@@ -1,5 +1,7 @@
 from urllib.parse import urlencode
 
+import logging
+
 import requests
 
 import ciscotropowebapi
@@ -16,35 +18,44 @@ def webhook_process(request, webhook_url):
      https://www.tropo.com/docs/coding-tips/parsing-json-python
 
      """
-    # Parse data passed in by Tropo
-    tropo_session = ciscotropowebapi.Session(request.data.decode())
 
-    # Create empty tropo response
+    # Parse json
+    json_data = request.data.decode()
+
+    # Parse data passed by Tropo
+    tropo_session = ciscotropowebapi.Session(json_data)
+
+    # Prepare the response
     tropo_response = ciscotropowebapi.Tropo()
 
     # Check to see if this is a request to send a message
     if hasattr(tropo_session, 'parameters'):
 
         number_to_call = tropo_session.parameters['numberToDial']
-        print("send_sms request to %s. Message %s" % (number_to_call, tropo_session.parameters['msg']))
-
-        # add a + if necessary
         if not number_to_call.startswith('+'):
+            # add a + if necessary
             number_to_call = '+' + number_to_call
 
-        # Send SMS: https://www.tropo.com/docs/webapi/quickstarts/sending-text-messages
+        message = tropo_session.parameters['message']
+
+        logging.log(logging.INFO,
+                    "send_sms request to %s. Message %s" % (number_to_call, message))
+
+        # We could use call and send as shown here: https://www.tropo.com/docs/webapi/quickstarts/sending-text-messages
         # tropo_response.call(to=number_to_call, network="SMS")
-        # tropo_response.say(tropo_session.msg)
+        # tropo_response.say(message)
 
         # Better yet, use the message "shortcut"
         # https://www.tropo.com/docs/webapi/quickstarts/mixing-text-voice-single-app/using-message-shortcut
-        tropo_response.message(tropo_session.parameters['msg'], number_to_call, network="SMS")
+        tropo_response.message(tropo_session.parameters['message'], number_to_call, network="SMS")
+
     # Inbound Voice Call
     elif tropo_session.from_['network'] is 'VOICE':
         print("Voice call from %s. Redirecting to %s" %
               (tropo_session.from_['id'], config.CUSTOMER_SERVICE_REDIRECT_DN) )
         # Send voice calls to the contact center DN
         tropo_response.redirect(config.CUSTOMER_SERVICE_REDIRECT_DN)
+
     # Inbound SMS
     elif hasattr(tropo_session, 'initialText'):
         if config.SPARK_TOKEN:
@@ -59,7 +70,11 @@ def webhook_process(request, webhook_url):
             if not spark_message:
                 tropo_response.say("There was a problem receiving your request, please try again later.")
         else:
-            print("Inbound SMS received from %s: Message: %s" % (tropo_session.from_['id'], tropo_session.initialText))
+            logging.log(logging.INFO,
+                        "Inbound SMS received from %s: Message: %s" %
+                        (tropo_session.from_['id'], tropo_session.initialText))
+
+    # Bogus request
     else:
         raise InvalidRequestError("Invalid request")
 
@@ -94,7 +109,7 @@ def send_sms(destination_number, text_message):
     query_string = {'action':'create',
                     'token':config.TROPO_KEY,
                     'numberToDial':destination_number,
-                    'msg':text_message,
+                    'message':text_message,
                    }
 
     url = 'https://api.tropo.com/1.0/sessions?%s' % urlencode(query_string)
