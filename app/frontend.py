@@ -32,8 +32,6 @@ def contact():
         # we need to escape things if we input user values:
         flash('We got your message and will get back to you soon!')
 
-        #form.email.data
-        #form.name.data
         #form.message.data
         #form.phone.data
 

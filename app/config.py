@@ -19,6 +19,8 @@ SPARK_AGENT_TEAM_ID = '9bbab210-2637-11e7-a892-e9d58302014a'
 SPARK_CUSTOMER_EMAIL = 'kkdoijvr@sharklasers.com'
 SPARK_TEAM_GENERAL_ROOM_ID = 'Y2lzY29zcGFyazovL3VzL1JPT00vYTlkNzkwNDAtMjYwOC0xMWU3LWIyZmEtZmI4YzMyNmRkMzI0'
 
+SPARK_TASK_ASSIGN_MOST_IDLE_ACTIVE = False
+
 # Optional: Used to validate webhook request came from Spark
 SPARK_WEBHOOK_SECRET = ''
 

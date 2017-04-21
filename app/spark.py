@@ -1,6 +1,6 @@
 import hashlib
 import hmac
-
+import random
 import logging
 
 from flask import abort
@@ -43,6 +43,7 @@ def create_new_message_webhook(room, webhook_url):
 
     return webhook
 
+
 def assign_team_member_to_customer_room(room, **room_args):
     """
     Find an active agent on the team and assign them to the room
@@ -59,7 +60,7 @@ def assign_team_member_to_customer_room(room, **room_args):
     person_ids_in_room = []
     logging.log(logging.INFO, room)
 
-    # Who is in the room
+    # Who is already in the room
     for membership in spark_api.memberships.list(roomId=room.id):
         person_ids_in_room.append(membership.personId)
 
@@ -71,16 +72,11 @@ def assign_team_member_to_customer_room(room, **room_args):
         if membership.personId in person_ids_in_room:
             continue
 
-        # Get the person object for current member
+        # Get the person object for current membership
         person = spark_api.people.get(membership.personId)
-        logging.log(logging.INFO, 'Looking up person %s' % person)
 
-        logging.log(logging.INFO, person.status)
-
-        # if available
+        # NOTE: Status is only shown to users in the same domain!
         if person.status == 'active':
-            logging.log(logging.INFO, 'ACTIVE MOTHER FUCKER!')
-            # add to list
             available_people.append(person)
 
     logging.log(logging.INFO, 'Available people %s' % available_people)
@@ -89,14 +85,17 @@ def assign_team_member_to_customer_room(room, **room_args):
         return False
 
     # Get the most idle, available user
+    if config.SPARK_TASK_ASSIGN_MOST_IDLE_ACTIVE:
+        available_people.sort(key=lambda agent: agent.lastActivity, reverse=True)
+    else:
+        # Random agent
+        random.shuffle(available_people)
+
     agent_to_assign = available_people.pop()
 
     logging.log(logging.INFO, 'Assiging %s' % agent_to_assign)
-
     # assign agent to room
     membership = spark_api.memberships.create(room.id, personId=agent_to_assign.id)
-
-    logging.log(logging.INFO, 'Membership %s' % membership)
 
     if membership:
         # indicate success
@@ -133,10 +132,8 @@ def customer_room_message_send(customer_id, **room_args):
         # New customer
         room = customer_new_signup(spark_api, customer_id, config.SPARK_AGENT_TEAM_ID, room_args['text'], room_args['webhook_url'])
 
-    logging.log(logging.INFO, 'RoomId %s' % room.id)
     # Check if any agents are in the room
     for membership in spark_api.memberships.list(roomId=room.id):
-        logging.log(logging.INFO, 'looking at membership: %s' % membership)
         if membership.personEmail == config.SPARK_CUSTOMER_EMAIL:
             # Skip our "bot user"
             logging.log(logging.INFO, 'Skipping bot user')
@@ -144,7 +141,6 @@ def customer_room_message_send(customer_id, **room_args):
 
         # Fetch person object from Spark API
         person = spark_api.people.get(membership.personId)
-        logging.log(logging.INFO, person)
 
         # https://developer.ciscospark.com/blog/blog-details-8727.html
         if person.status == 'active':
@@ -158,10 +154,13 @@ def customer_room_message_send(customer_id, **room_args):
         if not agent_assigned:
             message_to_customer = "No agents are available at the moment. We will assist you as soon as we can."
             tropo.send_sms(customer_id, message_to_customer)
+
             message_to_team = "Customer Waiting in room: %s" % customer_id
 
             # Find general room by sorting by created date
-            team_rooms = sorted(spark_api.rooms.list(teamId=config.SPARK_AGENT_TEAM_ID), key=lambda room: room.created, reverse=True)
+            team_rooms = sorted(spark_api.rooms.list(teamId=config.SPARK_AGENT_TEAM_ID),
+                                key=lambda room: room.created,
+                                reverse=True)
 
             # pop the oldest room from the list
             team_room = team_rooms.pop()
