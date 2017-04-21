@@ -7,7 +7,7 @@ import ciscotropowebapi
 from app import config
 
 
-def webhook_process(request):
+def webhook_process(request, webhook_url):
     """
      POST'd data from Tropo WebAPI on inbound voice/sms call
 
@@ -23,14 +23,14 @@ def webhook_process(request):
     tropo_response = ciscotropowebapi.Tropo()
 
     # Check to see if this is a request to send a message
-    if 'numberToDial' in tropo_session and 'msg' in tropo_session:
-        print("send_sms request to %s. Message %s" % (tropo_session.numberToDial, tropo_session.msg))
+    if hasattr(tropo_session, 'parameters'):
+
+        number_to_call = tropo_session.parameters['numberToDial']
+        print("send_sms request to %s. Message %s" % (number_to_call, tropo_session.parameters['msg']))
 
         # add a + if necessary
-        if tropo_session.numberToDial.startswith('+'):
-            number_to_call = tropo_session.numberToDial
-        else:
-            number_to_call = '+' + tropo_session.numberToDial
+        if not number_to_call.startswith('+'):
+            number_to_call = '+' + number_to_call
 
         # Send SMS: https://www.tropo.com/docs/webapi/quickstarts/sending-text-messages
         # tropo_response.call(to=number_to_call, network="SMS")
@@ -38,28 +38,28 @@ def webhook_process(request):
 
         # Better yet, use the message "shortcut"
         # https://www.tropo.com/docs/webapi/quickstarts/mixing-text-voice-single-app/using-message-shortcut
-        tropo_response.message(tropo_session.msg, number_to_call, network="SMS")
+        tropo_response.message(tropo_session.parameters['msg'], number_to_call, network="SMS")
     # Inbound Voice Call
-    elif tropo_session.fromaddress['network'] is 'VOICE':
+    elif tropo_session.from_['network'] is 'VOICE':
         print("Voice call from %s. Redirecting to %s" %
-              (tropo_session.fromaddress['id'], config.CUSTOMER_SERVICE_REDIRECT_DN) )
+              (tropo_session.from_['id'], config.CUSTOMER_SERVICE_REDIRECT_DN) )
         # Send voice calls to the contact center DN
         tropo_response.redirect(config.CUSTOMER_SERVICE_REDIRECT_DN)
     # Inbound SMS
-    elif tropo_session.initalText:
+    elif hasattr(tropo_session, 'initialText'):
         if config.SPARK_TOKEN:
             # Avoid circular imports, only import right before use
             from app import spark
             # post message to Spark room
-            spark_message = spark.customer_room_message_send(tropo_session.from_['id'], text=tropo_session.initialText)
+            spark_message = spark.customer_room_message_send(tropo_session.from_['id'],
+                                                             text=tropo_session.initialText,
+                                                             webhook_url=webhook_url)
 
-            # Acknowledge receipt/error of message
-            if spark_message:
-                tropo_response.say("Thanks. An agent will get back to you as soon as possible. :)")
-            else:
+            # if there was an error, notify caller
+            if not spark_message:
                 tropo_response.say("There was a problem receiving your request, please try again later.")
         else:
-            print("Inbound SMS received from %s: Message: %s"(tropo_session.initialText, tropo_session.from_['id']))
+            print("Inbound SMS received from %s: Message: %s" % (tropo_session.from_['id'], tropo_session.initialText))
     else:
         raise InvalidRequestError("Invalid request")
 

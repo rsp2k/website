@@ -10,6 +10,8 @@ from markupsafe import escape
 
 from .forms import ContactForm
 
+from app import spark
+
 frontend = Blueprint('frontend', __name__)
 
 # Simple Homepage
@@ -28,14 +30,17 @@ def contact():
         #
         # Note that the default flashed messages rendering allows HTML, so
         # we need to escape things if we input user values:
-        flash('Hello, {}. We got your message and will get back to you soon!'
-              .format(escape(form.name.data)))
-        form.data.clear()
+        flash('We got your message and will get back to you soon!')
 
         #form.email.data
         #form.name.data
         #form.message.data
         #form.phone.data
+
+        # send to customers room
+        webhook_url = url_for('api.spark_webhook_post', _external=True)
+        spark.customer_room_message_send(form.phone.data, text=form.message.data, webhook_url=webhook_url)
+        form.data.clear()
 
         # In a real application, you may wish to avoid this tedious redirect.
         return redirect(url_for('.index'))
