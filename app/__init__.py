@@ -12,7 +12,7 @@ from .frontend import frontend
 from .api import api
 from .nav import nav
 
-from .api import config
+from app import config
 
 def create_app(configfile=None):
     """
