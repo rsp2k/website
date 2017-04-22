@@ -18,13 +18,11 @@ def create_new_message_webhook(room, webhook_url):
     :param webhook_url: URL for webhook to POST JSON payload to
     :return: Cisco Spark Webhook object.
     """
-    # Create when
-    #  a message
+    # when  a message
     resource = "messages"
     # is created
     event = "created"
-    # in the newly created room
-    filter_ = "" # ""roomId=%s" % room.id
+    filter_ = ""
 
     # insecure example secret used to generate the payload signature
     secret = config.SPARK_WEBHOOK_SECRET
@@ -188,7 +186,7 @@ def is_customers_room(room, customer_id):
     customer_id_last10 = customer_id[-10:]
     if room_last_10 == customer_id_last10:
         return True
-    print ("NO MATCH", room_last_10, customer_id_last10)
+    logging.log(logging.INFO, "NO MATCH", room_last_10, customer_id_last10)
     return False
 
 
@@ -205,17 +203,19 @@ def customer_new_signup(spark_api, customer_id, team_id, message_from_customer, 
 
     # Send message via tropo
     message = "Thanks for signing up! To get in touch, reply to this message or call this number during business hours."
-    tropo.send_sms(customer_id, message)
+    tropo.send_sms(customer_id[-10:], message)
 
+    # Fetch all rooms and loop over them
     for room in spark_api.rooms.list():
         if is_customers_room(room, customer_id):
+            # If customer room is found we are done
             break
     else:
-        # create a new team room for the customer
+        # no room exists for customer, create a new team room
         # http://ciscosparkapi.readthedocs.io/en/latest/user/api.html#ciscosparkapi.RoomsAPI.create
         room = spark_api.rooms.create(customer_id, teamId=team_id)
 
-    # create webhook for new room
+    # create webhook if needed
     # http://ciscosparkapi.readthedocs.io/en/latest/user/api.html#ciscosparkapi.WebhooksAPI.create
     webhook = create_new_message_webhook(room, webhook_url)
 
@@ -228,12 +228,12 @@ def customer_new_signup(spark_api, customer_id, team_id, message_from_customer, 
 
 def webhook_process(request):
     """
-    Send any room messages to customer by SMS, making sure not to echo customer's SMS or @mention messges.
+    Send any room messages to customer by SMS, making sure not to echo customer's SMS or @mention messages.
     :param request: Flask request object
     :return: Flask response
     """
 
-
+    # Basic sanity checking
     if not request.json or not ('event' in request.json and 'data' in request.json):
         logging.log(logging.ERROR, 'No json or data in json')
         abort(400)
@@ -259,6 +259,7 @@ def webhook_process(request):
     if request.json['data']['personEmail'] == config.SPARK_CUSTOMER_EMAIL:
         return "OK"
 
+    # Connect to Spark API
     spark_api = ciscosparkapi.CiscoSparkAPI(access_token=config.SPARK_TOKEN)
 
     # Get the room info from room id that was passed from webhook
@@ -269,7 +270,7 @@ def webhook_process(request):
 
     # allow agents to privately exchange messages within context of the customer space
     # without sending a copy to the customer (agent whisper/notes)
-    if message.mentionedPeople:
+    if message.mentionedPeople and message.mentionedPeople:
         return 'OK'
 
     # customer id is room name

@@ -51,7 +51,7 @@ def webhook_process(request, webhook_url):
 
     # Inbound Voice Call
     elif tropo_session.from_['network'] is 'VOICE':
-        print("Voice call from %s. Redirecting to %s" %
+        logging.log(logging.INFO, "Voice call from %s. Redirecting to %s" %
               (tropo_session.from_['id'], config.CUSTOMER_SERVICE_REDIRECT_DN) )
         # Send voice calls to the contact center DN
         tropo_response.redirect(config.CUSTOMER_SERVICE_REDIRECT_DN)
